@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="../dist/bootstrap/css/bootstrap.min.css">
+
+    <script src="../dist/bootstrap/js/bootstrap.min.js"></script>
+    <script src="../dist/js/jquery-3.2.1.min.js"></script>
+</head>
+    <body>
+        <p>in react router v.4, if i wanna navigate the router in component , i
+            just need <br>
+            <code>this.history.push('/foo')</code>
+        </p>
+    <br>
+    <p> when i wanna navigate router in saga, i need use this way:
+        <!--history.js-->
+        <code>
+            <br>
+            import createHistory from 'history/createBrowserHistory';
+            <br>
+            export default createHistory();
+        </code>
+
+        <!--saga.js-->
+        <code>
+            history.push('/foo')
+        </code>
+
+        <p>
+            then you would found that the url has been changed but the page would not render,
+
+            don't worry ,
+            <br><b>change import the Router instead of BroswerRouter from react-router-dom</b><br>
+
+            then , all would be worked!
+        </p>
+    </p>
+
+    </body>
+</html>
