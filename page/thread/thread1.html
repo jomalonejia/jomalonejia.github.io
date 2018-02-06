@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../../dist/bootstrap/css/bootstrap.min.css">
+
+    <script src="../../dist/bootstrap/js/bootstrap.min.js"></script>
+    <script src="../../dist/js/jquery-3.2.1.min.js"></script>
+</head>
+<body>
+<h1>volatile</h1>
+<div>
+    <ul>
+        <li>保证可见性</li>
+        <li>禁止重排序</li>
+        <li>在汇编指令增加lock指令，让缓存写回内存</li>
+        <li>一个处理器的缓存回写到内存会导致其他处理器的缓存无效</li>
+    </ul>
+</div>
+
+<br><br>
+
+<h1>synchronize</h1>
+<div>
+    <ul>
+        <li>基于monitor监视器对象，通过monitorenter和monitorexit来获取释放锁</li>
+        <li>
+            <p>
+            <h3>偏向锁的获取</h3>
+
+            当一个线程访问同步块并获取锁时，会在对象头和栈帧中的锁记录里存储锁偏向的线程ID，<br>
+            以后该线程在进入和退出同步块时不需要花费CAS操作来加锁和解锁，<br>
+            而只需简单的测试一下对象头的Mark Word里是否存储着指向当前线程的偏向锁，<br>
+            如果测试成功，表示线程已经获得了锁，<br>
+            如果测试失败，则需要再测试下Mark Word中偏向锁的标识是否设置成1（表示当前是偏向锁），<br>
+            如果没有设置，则使用CAS竞争锁，如果设置了，则尝试使用CAS将对象头的偏向锁指向当前线程。<br>
+            <br>
+            <h3>偏向锁的撤销</h3>
+
+            偏向锁使用了一种等到竞争出现才释放锁的机制，所以当其他线程尝试竞争偏向锁时，<br>
+            持有偏向锁的线程才会释放锁。偏向锁的撤销，需要等待全局安全点（在这个时间点上没有字节码正在执行），<br>
+            它会首先暂停拥有偏向锁的线程，然后检查持有偏向锁的线程是否活着，<br>
+            如果线程不处于活动状态，则将对象头设置成无锁状态，<br>
+            如果线程仍然活着，拥有偏向锁的栈会被执行，<br>
+            遍历偏向对象的锁记录，栈中的锁记录和对象头的Mark Word，<br>
+            要么重新偏向于其他线程，<br>
+            要么恢复到无锁或者标记对象不适合作为偏向锁，<br>
+            最后唤醒暂停的线程。<br><br>
+
+            <h3>轻量级锁加锁</h3><br>
+
+            线程在执行同步块之前，JVM会先在当前线程的栈桢中创建用于存储锁记录的空间，<br>
+            并将对象头中的Mark Word复制到锁记录中，官方称为Displaced Mark Word。<br>
+            然后线程尝试使用CAS将对象头中的Mark Word替换为指向锁记录的指针。<br>
+            如果成功，当前线程获得锁，<br>
+            如果失败，则自旋获取锁，<br>
+            当自旋获取锁仍然失败时，表示存在其他线程竞争锁(两条或两条以上的线程竞争同一个锁)，<br>
+            则轻量级锁会膨胀成重量级锁。<br><br>
+
+            <h3>轻量级锁解锁</h3><br>
+
+            轻量级解锁时，会使用原子的CAS操作来将Displaced Mark Word替换回到对象头，<br>
+            如果成功，则表示同步过程已完成。<br>
+            如果失败，表示有其他线程尝试过获取该锁，则要在释放锁的同时唤醒被挂起的线程。<br><br>
+
+            <h3>重量级锁</h3><br>
+            重量锁在JVM中又叫对象监视器（Monitor），<br>
+            它很像C中的Mutex，除了具备Mutex(0|1)互斥的功能，<br>
+            它还负责实现了Semaphore(信号量)的功能，<br>
+            也就是说它至少包含一个竞争锁的队列，和一个信号阻塞队列（wait队列），<br>
+            前者负责做互斥，后一个用于做线程同步。<br><br>
+            </p>
+        </li>
+    </ul>
+    <br><br>
+    <table class="table">
+        <thead>
+        <th>锁</th>
+        <th>优点</th>
+        <th>缺点</th>
+        <th>适用场景</th>
+        </thead>
+        <tbody>
+        <tr>
+            <td>偏向锁</td>
+            <td>加锁和解锁不需要额外的消耗，和执行非同步方法比仅存在纳秒级的差距。</td>
+            <td>如果线程间存在锁竞争，会带来额外的锁撤销的消耗。</td>
+            <td>适用于只有一个线程访问同步块场景。</td>
+        </tr>
+        <tr>
+            <td>轻量级锁</td>
+            <td>竞争的线程不会阻塞，提高了程序的响应速度。</td>
+            <td>如果始终得不到锁竞争的线程使用自旋会消耗CPU。</td>
+            <td>追求响应时间。同步块执行速度非常快。</td>
+        </tr>
+        <tr>
+            <td>重量级锁</td>
+            <td>线程竞争不使用自旋，不会消耗CPU。</td>
+            <td>线程阻塞，响应时间缓慢。</td>
+            <td>追求吞吐量。同步块执行速度较长。</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+<br><br>
+
+<h1>线程池</h1>
+<div>
+    <ul>
+        <li><b>coolPoolSize</b>: 当提交一个任务到线程池时，线程池会创建一个线程来执行任务，<br>
+            即使其他空闲的基本线程能够执行新任务也会创建线程，等到需要执行的任务数大于线程池基本大小时就不再创建。<br>
+            如果调用了线程池的prestartAllCoreThreads方法，线程池会提前创建并启动所有基本线程
+        </li>
+        <li><b>maximumPoolSize</b>（线程池最大大小）：线程池允许创建的最大线程数。<br>
+            如果队列满了，并且已创建的线程数小于最大线程数，则线程池会再创建新的线程执行任务。<br>
+            值得注意的是如果使用了无界的任务队列这个参数就没什么效果。
+        </li>
+        <li><b>keepAliveTime</b>（线程活动保持时间）：线程池的工作线程空闲后，保持存活的时间。<br>
+            所以如果任务很多，并且每个任务执行的时间比较短，可以调大这个时间，提高线程的利用率。
+        </li>
+        <li><b>TimeUnit</b>（线程活动保持时间的单位）：可选的单位有天（DAYS），小时（HOURS），分钟（MINUTES），毫秒(MILLISECONDS)，微秒(MICROSECONDS,
+            千分之一毫秒)和毫微秒(NANOSECONDS, 千分之一微秒)。
+        </li>
+        <li><b>runnableTaskQueue</b>（任务队列）：用于保存等待执行的任务的阻塞队列。 可以选择以下几个阻塞队列。<br>
+            <ul>
+                <li>ArrayBlockingQueue：是一个基于数组结构的有界阻塞队列，此队列按 FIFO（先进先出）原则对元素进行排序。</li>
+                <li>LinkedBlockingQueue：一个基于链表结构的阻塞队列，此队列按FIFO （先进先出）
+                    排序元素，吞吐量通常要高于ArrayBlockingQueue。静态工厂方法Executors.newFixedThreadPool()使用了这个队列。
+                </li>
+                <li>
+                    SynchronousQueue：一个不存储元素的阻塞队列。每个插入操作必须等到另一个线程调用移除操作，否则插入操作一直处于阻塞状态，吞吐量通常要高于LinkedBlockingQueue，静态工厂方法Executors.newCachedThreadPool使用了这个队列。
+                </li>
+                <li>PriorityBlockingQueue：一个具有优先级的无限阻塞队列。</li>
+            </ul>
+        </li>
+        <li><b>RejectedExecutionHandler</b>（饱和策略）：当队列和线程池都满了，说明线程池处于饱和状态，那么必须采取一种策略处理提交的新任务。<br>
+            这个策略默认情况下是AbortPolicy，表示无法处理新任务时抛出异常。以下是JDK1.5提供的四种策略。<br>
+            <ul>
+                <li>AbortPolicy：直接抛出异常。</li>
+                <li>CallerRunsPolicy：只用调用者所在线程来运行任务。</li>
+                <li>DiscardOldestPolicy：丢弃队列里最近的一个任务，并执行当前任务。</li>
+                <li>DiscardPolicy：不处理，丢弃掉。</li>
+            </ul>
+            当然也可以根据应用场景需要来实现RejectedExecutionHandler接口自定义策略。如记录日志或持久化不能处理的任务。
+        </li>
+        <br><br>
+        <li><b>ThreadFactory</b>：用于设置创建线程的工厂，可以通过线程工厂给每个创建出来的线程设置更有意义的名字。</li>
+    </ul>
+</div>
+
+<br><br>
+<h1>原子操作</h1>
+<div>
+    <ul>
+        <li>锁总线：使用处理器提供的一个LOCK＃信号，<br>
+            当一个处理器在总线上输出此信号时，其他处理器的请求将被阻塞住,那么该处理器可以独占使用共享内存。</li>
+        <li>锁缓存：如果缓存在处理器缓存行中内存区域在LOCK操作期间被锁定，<br>
+            当它执行锁操作回写内存时，处理器不在总线上声言LOCK＃信号，而是修改内部的内存地址，<br>
+            并允许它的缓存一致性机制来保证操作的原子性，因为缓存一致性机制会阻止同时修改被两个以上处理器缓存的内存区域数据，<br>
+            当其他处理器回写已被锁定的缓存行的数据时会起缓存行无效，<br>
+            在例1中，当CPU1修改缓存行中的i时使用缓存锁定，那么CPU2就不能同时缓存了i的缓存行。</li>
+    </ul>
+</div>
+
+<br><br>
+</body>
+</html>
